@@ -17,6 +17,7 @@ UI:
  */
 TextEditingController insertName = TextEditingController();
 TextEditingController insertDescription = TextEditingController();
+TextEditingController insertDate = TextEditingController();
 void main() {
   runApp(const MyApp());
 }
@@ -32,7 +33,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'Plan Manager'),
     );
   }
 }
@@ -50,8 +51,9 @@ class Plan {
   String planName;
   bool markComplete;
   String description;
+  String date;
 
-  Plan(this.planName, this.markComplete, this.description);
+  Plan(this.planName, this.markComplete, this.description, this.date);
 }
 
 class _PlanManagerScreen extends State<MyHomePage> {
@@ -59,7 +61,12 @@ class _PlanManagerScreen extends State<MyHomePage> {
 
   _createPlan() {
     setState(() {
-      _planList.add(Plan(insertName.text, false, insertDescription.text));
+      _planList.add(Plan(
+        insertName.text, 
+        false, 
+        insertDescription.text, 
+        insertDate.text,
+      ));
     });
   }
 
@@ -99,7 +106,7 @@ class _PlanManagerScreen extends State<MyHomePage> {
                         'Create Plan',
                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)
                       ),
-                      SizedBox(height: 40.0),
+                      SizedBox(height: 20.0),
                       TextField(
                         obscureText: false,
                         decoration: const InputDecoration(
@@ -118,8 +125,25 @@ class _PlanManagerScreen extends State<MyHomePage> {
                         controller: insertDescription,
                       ),
                       SizedBox(height: 30.0),
+                      TextField(
+                        controller: insertDate,
+                        decoration: InputDecoration(
+                          labelText: 'Date',
+                          filled: true, 
+                          
+                        ),
+                        readOnly: true,
+                        onTap: () { 
+                          _selectDate();
+                          
+                        }
+                      ),
+                      SizedBox(height: 20.0),
                       ElevatedButton(
-                        onPressed: () { _createPlan; },
+                        onPressed: () { 
+                          _createPlan;
+                          Navigator.pop(context); 
+                        },
                         child: Text('Confirm'),
                       ),
                     ],
@@ -132,5 +156,19 @@ class _PlanManagerScreen extends State<MyHomePage> {
         child: Icon(Icons.add),
       ), 
     );
+  }
+
+  Future<void> _selectDate() async {
+    DateTime? _picked = await showDatePicker(
+      context: context, 
+      initialDate: DateTime.now(),
+      firstDate: DateTime.utc(2025, DateTime.now().month, 1), 
+      lastDate: DateTime.utc(2025, DateTime.now().month + 1, 0),
+    );
+    if (_picked != null) {
+      setState(() {
+        insertDate.text = _picked.toString().split(" ")[0];
+      });
+    }
   }
 }
