@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:calendar_view/calendar_view.dart';
-import 'dart:ui';
+import 'package:intl/intl.dart';
 /*
 UI: 
-  1. Drag+drop interface to draw new plans into a list
-  2. Interactive calendar to drop plans -> specific date
-  3. 'Create Plan' button to open modal to enter plan details [name, desc, date]
+  X1. Drag+drop interface to draw new plans into a list
+  X2. Interactive calendar to drop plans -> specific date
+  X3. 'Create Plan' button to open modal to enter plan details [name, desc, date]
   4. Color-coded list to display adoption+travel plans based on status [pending, complete]
   5. Plans in list shld have 
     swipe gesture=complete/incomplete, 
@@ -54,7 +54,7 @@ class Plan {
   String planName;
   bool markComplete;
   String description;
-  String date;
+  DateTime date;
 
   Plan(this.planName, this.markComplete, this.description, this.date);
 }
@@ -64,6 +64,7 @@ class _PlanManagerScreen extends State<MyHomePage> {
   final TextEditingController insertDescription = TextEditingController();
   final TextEditingController insertDate = TextEditingController();
   List<Plan> _planList = [];
+  List<Plan> _matchedDates = [];
   DateTime _dateChosen = DateTime(2025, 03, 01);
 
   _createPlan() {
@@ -72,7 +73,7 @@ class _PlanManagerScreen extends State<MyHomePage> {
         insertName.text, 
         false, 
         insertDescription.text, 
-        insertDate.text,
+        _dateChosen,
       ));
       final event = CalendarEventData(
         date: _dateChosen,
@@ -82,6 +83,7 @@ class _PlanManagerScreen extends State<MyHomePage> {
       CalendarControllerProvider.of(context).controller.add(event);
     });
   }
+
   Future<void> _selectDate() async {
     DateTime? _picked = await showDatePicker(
       context: context, 
@@ -97,6 +99,18 @@ class _PlanManagerScreen extends State<MyHomePage> {
     }
   }
 
+  FilterPlans(DateTime dateToMatch) {
+    setState(() {
+      _matchedDates.clear();
+      for (int i = 0; i < _planList.length; i++) {
+        DateTime currentPlanDate = _planList[i].date;
+        if (currentPlanDate.compareTo(dateToMatch) == 0) {
+          _matchedDates.add(_planList[i]);
+        }
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -106,7 +120,46 @@ class _PlanManagerScreen extends State<MyHomePage> {
       ),
       body: Column(
         children: [
-          Expanded(child: MonthView()),
+          Expanded(child: MonthView(
+            onCellTap: (event, date) {
+              setState(() { FilterPlans(date); });
+              showModalBottomSheet<void>(
+                context: context, 
+                builder: (BuildContext context) {
+                  String dateFormat = DateFormat('MM-dd-yyyy').format(date);
+                  return SizedBox(
+                    height: 700, 
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Text(
+                              dateFormat,
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                            ),
+                          ),
+                          Expanded(
+                            child: _matchedDates.isEmpty ? const Center(child: Text('No events found')) :
+                            ListView.builder(
+                              itemCount: _matchedDates.length,
+                              itemBuilder: (context, index) {
+                                return ListTile(
+                                  title: Text(_matchedDates[index].planName),
+                                  tileColor: Colors.lightBlueAccent,
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+            }
+          )),
         ],
       ),
       // ADD PLAN MODAL
