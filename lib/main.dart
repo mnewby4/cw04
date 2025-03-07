@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:calendar_view/calendar_view.dart';
+import 'dart:ui';
 /*
 UI: 
   1. Drag+drop interface to draw new plans into a list
@@ -10,14 +12,11 @@ UI:
     long-press=edit plan name, 
     double-tap=delete plan from list
 
-  PlanManagerScreen=main screen w list of plans [each w obj=name+completion status] as instance var
+  XPlanManagerScreen=main screen w list of plans [each w obj=name+completion status] as instance var
   method to add/update/complete/remove plan w setstate
   Display=widget marks plans as complete, update plan name, delete plans via setstate
 
  */
-TextEditingController insertName = TextEditingController();
-TextEditingController insertDescription = TextEditingController();
-TextEditingController insertDate = TextEditingController();
 void main() {
   runApp(const MyApp());
 }
@@ -27,13 +26,17 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+    return 
+    CalendarControllerProvider(
+      controller: EventController(),
+      child: MaterialApp(
+        title: 'Flutter Demo',
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+          useMaterial3: true,
+        ),
+        home: const MyHomePage(title: 'Plan Manager'),
       ),
-      home: const MyHomePage(title: 'Plan Manager'),
     );
   }
 }
@@ -57,7 +60,11 @@ class Plan {
 }
 
 class _PlanManagerScreen extends State<MyHomePage> {
+  final TextEditingController insertName = TextEditingController();
+  final TextEditingController insertDescription = TextEditingController();
+  final TextEditingController insertDate = TextEditingController();
   List<Plan> _planList = [];
+  DateTime _dateChosen = DateTime(2025, 03, 01);
 
   _createPlan() {
     setState(() {
@@ -67,7 +74,27 @@ class _PlanManagerScreen extends State<MyHomePage> {
         insertDescription.text, 
         insertDate.text,
       ));
+      final event = CalendarEventData(
+        date: _dateChosen,
+        title: insertName.text,
+        description: insertDescription.text,
+      );
+      CalendarControllerProvider.of(context).controller.add(event);
     });
+  }
+  Future<void> _selectDate() async {
+    DateTime? _picked = await showDatePicker(
+      context: context, 
+      initialDate: DateTime.now(),
+      firstDate: DateTime.utc(2025, DateTime.now().month, 1), 
+      lastDate: DateTime.utc(2025, DateTime.now().month + 1, 0),
+    );
+    if (_picked != null) {
+      setState(() {
+        insertDate.text = _picked.toString().split(" ")[0];
+        _dateChosen = _picked;
+      });
+    }
   }
 
   @override
@@ -77,20 +104,12 @@ class _PlanManagerScreen extends State<MyHomePage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            /*const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),*/
-          ],
-        ),
+      body: Column(
+        children: [
+          Expanded(child: MonthView()),
+        ],
       ),
+      // ADD PLAN MODAL
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           showModalBottomSheet<void>(
@@ -130,18 +149,16 @@ class _PlanManagerScreen extends State<MyHomePage> {
                         decoration: InputDecoration(
                           labelText: 'Date',
                           filled: true, 
-                          
                         ),
                         readOnly: true,
                         onTap: () { 
                           _selectDate();
-                          
                         }
                       ),
                       SizedBox(height: 20.0),
                       ElevatedButton(
                         onPressed: () { 
-                          _createPlan;
+                          _createPlan();
                           Navigator.pop(context); 
                         },
                         child: Text('Confirm'),
@@ -156,19 +173,5 @@ class _PlanManagerScreen extends State<MyHomePage> {
         child: Icon(Icons.add),
       ), 
     );
-  }
-
-  Future<void> _selectDate() async {
-    DateTime? _picked = await showDatePicker(
-      context: context, 
-      initialDate: DateTime.now(),
-      firstDate: DateTime.utc(2025, DateTime.now().month, 1), 
-      lastDate: DateTime.utc(2025, DateTime.now().month + 1, 0),
-    );
-    if (_picked != null) {
-      setState(() {
-        insertDate.text = _picked.toString().split(" ")[0];
-      });
-    }
   }
 }
