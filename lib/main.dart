@@ -6,10 +6,10 @@ UI:
   X1. Drag+drop interface to draw new plans into a list
   X2. Interactive calendar to drop plans -> specific date
   X3. 'Create Plan' button to open modal to enter plan details [name, desc, date]
-  4. Color-coded list to display adoption+travel plans based on status [pending, complete]
+  X4. Color-coded list to display adoption+travel plans based on status [pending, complete]
   5. Plans in list shld have 
-    swipe gesture=complete/incomplete, 
-    long-press=edit plan name, 
+    Xswipe gesture=complete/incomplete, 
+    Xlong-press=edit plan name, 
     double-tap=delete plan from list
 
   XPlanManagerScreen=main screen w list of plans [each w obj=name+completion status] as instance var
@@ -64,6 +64,7 @@ class _PlanManagerScreen extends State<MyHomePage> {
   final TextEditingController insertName = TextEditingController();
   final TextEditingController insertDescription = TextEditingController();
   final TextEditingController insertDate = TextEditingController();
+  final TextEditingController editName = TextEditingController();
   List<Plan> _planList = [];
   List<Plan> _matchedDates = [];
   DateTime _dateChosen = DateTime(2025, 03, 01);
@@ -119,7 +120,7 @@ class _PlanManagerScreen extends State<MyHomePage> {
       _matchedDates[index].color = _matchedDates[index].markComplete ? Colors.lightBlue : Colors.red;
       
       for (int i = 0; i < _planList.length; i++) {
-        if (_planList[i].planName == _matchedDates[index].planName) {
+        if (_planList[i] == _matchedDates[index]) {
           _planList[i].markComplete = _matchedDates[index].markComplete;
           _planList[i].color = _matchedDates[index].color;
         }
@@ -127,6 +128,69 @@ class _PlanManagerScreen extends State<MyHomePage> {
     });
   }
 
+  void _editName(int index, StateSetter setModalState) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return SizedBox(
+          height: 300, 
+          child: Column(
+            children: [
+              TextField(
+                obscureText: false,
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: _matchedDates[index].planName,
+                  ),
+                controller: editName,
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _matchedDates[index].planName = editName.text;
+                    for (int i = 0; i < _planList.length; i++) {
+                      if (_planList[i] == _matchedDates[index]) {
+                        _planList[i].planName = _matchedDates[index].planName;
+                        break;
+                      }
+                    }
+                  });
+                  setModalState(() {});
+                  Navigator.of(context).pop();
+                },
+                child: Text("Confirm"),
+              ),
+            ],
+          )
+        );
+      },
+    );
+  }
+
+  _deletePlan(int index, StateSetter setModalState) {
+    setState(() {
+      var cal = CalendarControllerProvider.of(context).controller;
+      CalendarEventData? eventToRemove;
+
+      for (int i = 0; i < _planList.length; i++) {
+        if (_planList[i] == _matchedDates[index]) {
+          _planList.removeAt(i);
+          for (var event in cal.events) {
+            if (event.date == _matchedDates[index].date &&
+                event.title == _matchedDates[index].planName) {
+              eventToRemove = event;
+              break;
+            }
+          }
+        }
+      }
+      _matchedDates.removeAt(index);
+      if (eventToRemove != null) {
+        cal.remove(eventToRemove);
+      }
+      
+    });
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -165,15 +229,22 @@ class _PlanManagerScreen extends State<MyHomePage> {
                                   itemBuilder: (context, index) {
                                     return GestureDetector(
                                       onHorizontalDragEnd: (details) {
-                                        print("Drag Ended");
                                         _changeCompletion(index);
                                         // MODAL REBUILD
                                         setModalState(() {}); 
                                       },
+                                      onLongPress: () {
+                                        _editName(index, setModalState);
+                                        setModalState(() {});
+                                      },
+                                      onDoubleTap: () {
+                                        _deletePlan(index, setModalState);
+                                        setModalState(() {});
+                                      },
                                       child: ListTile(
                                         title: Text(_matchedDates[index].planName),
                                         tileColor: _matchedDates[index].color,
-                                        subtitle: Text('Complete: ${_matchedDates[index].markComplete}'),
+                                        subtitle: Text('Description: ${_matchedDates[index].description}'),
                                       ),
                                     );
                                   },
