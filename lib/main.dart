@@ -55,8 +55,9 @@ class Plan {
   bool markComplete;
   String description;
   DateTime date;
+  Color color = Colors.blue; 
 
-  Plan(this.planName, this.markComplete, this.description, this.date);
+  Plan(this.planName, this.markComplete, this.description, this.date, this.color);
 }
 
 class _PlanManagerScreen extends State<MyHomePage> {
@@ -74,6 +75,7 @@ class _PlanManagerScreen extends State<MyHomePage> {
         false, 
         insertDescription.text, 
         _dateChosen,
+        Colors.red,
       ));
       final event = CalendarEventData(
         date: _dateChosen,
@@ -99,13 +101,27 @@ class _PlanManagerScreen extends State<MyHomePage> {
     }
   }
 
-  FilterPlans(DateTime dateToMatch) {
+  _filterPlans(DateTime dateToMatch) {
     setState(() {
       _matchedDates.clear();
       for (int i = 0; i < _planList.length; i++) {
         DateTime currentPlanDate = _planList[i].date;
         if (currentPlanDate.compareTo(dateToMatch) == 0) {
           _matchedDates.add(_planList[i]);
+        }
+      }
+    });
+  }
+
+  _changeCompletion(int index) {
+    setState(() {
+      _matchedDates[index].markComplete = !_matchedDates[index].markComplete;
+      _matchedDates[index].color = _matchedDates[index].markComplete ? Colors.lightBlue : Colors.red;
+      
+      for (int i = 0; i < _planList.length; i++) {
+        if (_planList[i].planName == _matchedDates[index].planName) {
+          _planList[i].markComplete = _matchedDates[index].markComplete;
+          _planList[i].color = _matchedDates[index].color;
         }
       }
     });
@@ -122,9 +138,9 @@ class _PlanManagerScreen extends State<MyHomePage> {
         children: [
           Expanded(child: MonthView(
             onCellTap: (event, date) {
-              setState(() { FilterPlans(date); });
+              setState(() { _filterPlans(date); });
               showModalBottomSheet<void>(
-                context: context, 
+                context: context,
                 builder: (BuildContext context) {
                   String dateFormat = DateFormat('MM-dd-yyyy').format(date);
                   return SizedBox(
@@ -141,13 +157,26 @@ class _PlanManagerScreen extends State<MyHomePage> {
                             ),
                           ),
                           Expanded(
-                            child: _matchedDates.isEmpty ? const Center(child: Text('No events found')) :
-                            ListView.builder(
-                              itemCount: _matchedDates.length,
-                              itemBuilder: (context, index) {
-                                return ListTile(
-                                  title: Text(_matchedDates[index].planName),
-                                  tileColor: Colors.lightBlueAccent,
+                            child: _matchedDates.isEmpty ? const Center(child: Text('No plans! Enjoy your day off.')) :
+                            StatefulBuilder(
+                              builder: (context, setModalState) {
+                                return ListView.builder(
+                                  itemCount: _matchedDates.length,
+                                  itemBuilder: (context, index) {
+                                    return GestureDetector(
+                                      onHorizontalDragEnd: (details) {
+                                        print("Drag Ended");
+                                        _changeCompletion(index);
+                                        // MODAL REBUILD
+                                        setModalState(() {}); 
+                                      },
+                                      child: ListTile(
+                                        title: Text(_matchedDates[index].planName),
+                                        tileColor: _matchedDates[index].color,
+                                        subtitle: Text('Complete: ${_matchedDates[index].markComplete}'),
+                                      ),
+                                    );
+                                  },
                                 );
                               },
                             ),
@@ -162,7 +191,6 @@ class _PlanManagerScreen extends State<MyHomePage> {
           )),
         ],
       ),
-      // ADD PLAN MODAL
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           showModalBottomSheet<void>(
@@ -224,7 +252,7 @@ class _PlanManagerScreen extends State<MyHomePage> {
           );
         },
         child: Icon(Icons.add),
-      ), 
+      ),
     );
   }
 }
