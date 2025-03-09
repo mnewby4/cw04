@@ -55,7 +55,7 @@ class Plan {
   bool markComplete;
   String description;
   DateTime date;
-  Color color = Colors.blue; 
+  Color color = Colors.red; 
 
   Plan(this.planName, this.markComplete, this.description, this.date, this.color);
 }
@@ -76,13 +76,14 @@ class _PlanManagerScreen extends State<MyHomePage> {
         false, 
         insertDescription.text, 
         _dateChosen,
-        Colors.red,
+        Colors.red, //incomplete color
       ));
       final event = CalendarEventData(
         date: _dateChosen,
         title: insertName.text,
         description: insertDescription.text,
       );
+      //add to calendar view
       CalendarControllerProvider.of(context).controller.add(event);
     });
   }
@@ -201,6 +202,7 @@ class _PlanManagerScreen extends State<MyHomePage> {
       body: Column(
         children: [
           Expanded(child: MonthView(
+            //PLAN LIST (when click on date/cell)
             onCellTap: (event, date) {
               setState(() { _filterPlans(date); });
               showModalBottomSheet<void>(
@@ -244,8 +246,7 @@ class _PlanManagerScreen extends State<MyHomePage> {
                                       child: ListTile(
                                         title: Text(_matchedDates[index].planName),
                                         tileColor: _matchedDates[index].color,
-                                        subtitle: Text('Description: ${_matchedDates[index].description}'),
-                                      ),
+                                        subtitle: Text('Description: ${_matchedDates[index].description}\nCompletion Status: ${_matchedDates[index].markComplete}'),                                      ),
                                     );
                                   },
                                 );
@@ -264,6 +265,7 @@ class _PlanManagerScreen extends State<MyHomePage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
+          //ADD PLAN SHEET
           showModalBottomSheet<void>(
             context: context,
             builder: (BuildContext context) {
